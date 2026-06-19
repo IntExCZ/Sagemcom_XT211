@@ -1,7 +1,7 @@
 {
   "domain": "xt211_han",
   "name": "XT211 HAN (RS485 via Ethernet)",
-  "version": "0.9.0",
+  "version": "0.2.0",
   "documentation": "https://github.com/IntExCZ/Sagemcom_XT211",
   "issue_tracker": "https://github.com/IntExCZ/Sagemcom_XT211/issues",
   "dependencies": [],
