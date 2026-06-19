@@ -1,7 +1,7 @@
 {
   "domain": "xt211_han",
   "name": "XT211 HAN (RS485 via Ethernet)",
-  "version": "0.1.0",
+  "version": "0.9.0",
   "documentation": "https://github.com/IntExCZ/Sagemcom_XT211",
   "issue_tracker": "https://github.com/IntExCZ/Sagemcom_XT211/issues",
   "dependencies": [],
@@ -10,13 +10,5 @@
   ],
   "requirements": [],
   "iot_class": "local_push",
-  "config_flow": true,
-  "dhcp": [
-    {
-      "macaddress": "D8B04C*"
-    },
-    {
-      "macaddress": "B4E62D*"
-    }
-  ]
+  "config_flow": true
 }
