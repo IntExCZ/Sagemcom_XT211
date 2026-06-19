@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import asyncio
+from datetime import datetime
 import logging
 from typing import Any
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from homeassistant.util import dt as dt_util
 
 from .dlms_parser import DLMSObject, DLMSParser, OBIS_DESCRIPTIONS
 
@@ -30,6 +32,7 @@ class XT211Coordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._listen_task: asyncio.Task | None = None
         self._connected = False
         self._frames_received = 0
+        self.last_rx_timestamp: datetime | None = None
 
     @property
     def connected(self) -> bool:
@@ -111,17 +114,21 @@ class XT211Coordinator(DataUpdateCoordinator[dict[str, Any]]):
                 if result is None:
                     break
                 self._frames_received += 1
+                received_at = dt_util.utcnow()
+                self._set_last_rx_values(result.raw_hex, received_at)
                 if result.success:
                     _LOGGER.debug("XT211 frame #%d parsed OK: %d object(s)", self._frames_received, len(result.objects))
                     await self._process_frame(result.objects)
                 else:
                     _LOGGER.debug("XT211 frame #%d parse error: %s (raw: %s)", self._frames_received, result.error, result.raw_hex[:120])
+                    self.async_update_listeners()
 
     async def _process_frame(self, objects: list[DLMSObject]) -> None:
+        current = dict(self.data or {})
         if not objects:
             _LOGGER.debug("Received empty DLMS frame")
+            self.async_set_updated_data(current)
             return
-        current = dict(self.data or {})
         changed: list[str] = []
         for obj in objects:
             meta = OBIS_DESCRIPTIONS.get(obj.obis, {})
@@ -137,3 +144,6 @@ class XT211Coordinator(DataUpdateCoordinator[dict[str, Any]]):
             _LOGGER.debug("XT211 OBIS %s = %r %s", obj.obis, obj.value, new_value["unit"])
         self.async_set_updated_data(current)
         _LOGGER.debug("Coordinator updated with %d object(s), %d changed: %s", len(objects), len(changed), ", ".join(changed[:10]))
+
+    def _set_last_rx_values(self, raw_hex: str, received_at: datetime) -> None:
+        self.last_rx_timestamp = received_at

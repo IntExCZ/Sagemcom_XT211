@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+
 from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_NAME, EntityCategory, UnitOfEnergy, UnitOfPower
@@ -60,6 +62,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
     enabled_obis = build_enabled_obis(entry)
     entities = [XT211SensorEntity(coordinator, entry, obis, meta) for obis, meta in OBIS_DESCRIPTIONS.items() if obis in enabled_obis and obis not in BINARY_OBIS and obis not in TEXT_OBIS]
     entities.extend(XT211AliasedTextSensorEntity(coordinator, entry, key, spec) for key, spec in PRECREATED_TEXT_ENTITIES.items())
+    entities.append(XT211LastMessageTimestampSensorEntity(coordinator, entry))
     async_add_entities(entities)
     registered_obis = {entity._obis for entity in entities if hasattr(entity, "_obis")}
 
@@ -178,3 +181,28 @@ class XT211DynamicTextSensorEntity(CoordinatorEntity[XT211Coordinator], SensorEn
     @property
     def available(self) -> bool:
         return self.coordinator.data is not None
+
+
+class XT211LastMessageTimestampSensorEntity(CoordinatorEntity[XT211Coordinator], SensorEntity):
+    _attr_has_entity_name = True
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
+
+    def __init__(self, coordinator: XT211Coordinator, entry: ConfigEntry) -> None:
+        super().__init__(coordinator)
+        self._entry = entry
+        self._attr_unique_id = f"{entry.entry_id}_last_message_timestamp"
+        self._attr_name = "Timestamp přijaté zprávy"
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        return _device_info(self._entry)
+
+    @property
+    def native_value(self) -> datetime | None:
+        return self.coordinator.last_rx_timestamp
+
+    @property
+    def available(self) -> bool:
+        return self.coordinator.data is not None
+
